@@ -1234,7 +1234,7 @@ endmodule
       -- Dump generated C++ snippet for debugging
       let lines := cpp.splitOn "\n"
       let memLines := lines.filter fun l => (l.splitOn "memory[").length > 1
-      for l in memLines.take 5 do IO.println s!"  {l.trim}"
+      for l in memLines.take 5 do IO.println s!"  {l.trimAscii.toString}"
       failed := failed + 1
   catch e => IO.println s!"FAIL: {e}"; failed := failed + 1
   -- Tests multi-bit replication used by PicoRV32: {2{reg_op2[15:0]}}

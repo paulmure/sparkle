@@ -31,7 +31,7 @@ private def hexByte (b : Nat) : String :=
   let hi := (b >>> 4) &&& 0xF
   let digit (d : Nat) : Char :=
     if d < 10 then Char.ofNat (d + 0x30) else Char.ofNat (d - 10 + 0x61)
-  String.mk [digit hi, digit lo]
+  String.ofList [digit hi, digit lo]
 
 private def bytesToHex (bs : Array UInt8) : String := Id.run do
   let mut out := ""

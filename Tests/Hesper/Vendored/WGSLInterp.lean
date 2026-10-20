@@ -153,6 +153,10 @@ We hand-pick the constructors needed for BitLinear + attention.
 Each constructor name matches upstream Hesper for drop-in
 compatibility once the PR lands. -/
 
+/-- Texture size queries share one expression constructor to fit Lean's runtime tag limit. -/
+inductive TextureCountKind where
+  | layers | levels | samples
+
 inductive Exp : WGSLType → Type where
   -- Literals
   | litF32  : Float → Exp (.scalar .f32)
@@ -365,7 +369,6 @@ inductive Exp : WGSLType → Type where
   | subgroupAnd {t : WGSLType} : Exp t → Exp t
   | subgroupOr  {t : WGSLType} : Exp t → Exp t
   | subgroupXor {t : WGSLType} : Exp t → Exp t
-  | subgroupElect : Exp (.scalar .bool)
   | subgroupBallot : Exp (.scalar .bool) → Exp (.scalar .u32)
   | subgroupExclusiveAdd {t : WGSLType} : Exp t → Exp t
   | subgroupInclusiveAdd {t : WGSLType} : Exp t → Exp t
@@ -389,17 +392,10 @@ inductive Exp : WGSLType → Type where
   | dpdx  : Exp (.scalar .f32) → Exp (.scalar .f32)
   | dpdy  : Exp (.scalar .f32) → Exp (.scalar .f32)
   | fwidth : Exp (.scalar .f32) → Exp (.scalar .f32)
-  -- Barriers / sync (no-op in single-thread eval)
-  | workgroupBarrier : Exp (.scalar .bool)
-  | textureBarrier   : Exp (.scalar .bool)
-  | warpBarrier      : Exp (.scalar .bool)
   -- CUDA copy-async (no-op stubs)
-  | cpAsyncCommitGroup : Exp (.scalar .bool)
   | cpAsyncWaitGroup   : Exp (.scalar .u32) → Exp (.scalar .bool)
   | cpAsyncCaSharedGlobal : Exp (.scalar .u32) → Exp (.scalar .u32) → Exp (.scalar .bool)
   | cpAsyncCgSharedGlobal : Exp (.scalar .u32) → Exp (.scalar .u32) → Exp (.scalar .bool)
-  -- Storage barrier
-  | storageBarrier : Exp (.scalar .bool)
   -- Workgroup-uniform load (single-thread semantics: just read).
   | workgroupUniformLoad {t : WGSLType} : Exp t → Exp t
   -- Atomic ops. Single-thread eval: atomic load/exchange degrade
@@ -540,9 +536,22 @@ inductive Exp : WGSLType → Type where
                            → Exp (.scalar .f32)
   | textureGather : Exp (.scalar .u32) → Exp (.texture2D "f32") → Exp .sampler
                     → Exp (.vec2 .f32) → Exp (.vec4 .f32)
-  | textureNumLayers : Exp (.texture2D "f32") → Exp (.scalar .u32)
-  | textureNumLevels : Exp (.texture2D "f32") → Exp (.scalar .u32)
-  | textureNumSamples : Exp (.texture2D "f32") → Exp (.scalar .u32)
+  | textureCount : TextureCountKind → Exp (.texture2D "f32") → Exp (.scalar .u32)
+  -- Scalar constructors can use tags above Lean's heap-constructor limit (243).
+  | subgroupElect : Exp (.scalar .bool)
+  | workgroupBarrier : Exp (.scalar .bool)
+  | textureBarrier   : Exp (.scalar .bool)
+  | warpBarrier      : Exp (.scalar .bool)
+  | cpAsyncCommitGroup : Exp (.scalar .bool)
+  | storageBarrier : Exp (.scalar .bool)
+
+namespace Exp
+
+@[match_pattern] abbrev textureNumLayers := textureCount .layers
+@[match_pattern] abbrev textureNumLevels := textureCount .levels
+@[match_pattern] abbrev textureNumSamples := textureCount .samples
+
+end Exp
 
 /-! ## Environment
 

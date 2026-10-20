@@ -330,7 +330,7 @@ def runOnce (label : String) (verilog testbench : String) :
     banner lines (`VCD info: …`) we don't want to inspect. -/
 def parseVvpOutput (s : String) : List Nat :=
   s.splitOn "\n" |>.filterMap fun ln =>
-    let trimmed := ln.trim
+    let trimmed := ln.trimAscii.toString
     String.toNat? trimmed
 
 -- ============================================================================
@@ -847,18 +847,18 @@ def hftOutByteVerilog : String := verilogOf! hftOutByteTop
     top-level module appears last in the emitted source. -/
 def parseModuleName (verilog : String) : String :=
   let lines := verilog.splitOn "\n"
-  let modLines := lines.filter fun l => l.trim.startsWith "module "
+  let modLines := lines.filter fun l => l.trimAscii.toString.startsWith "module "
   let lastMod? := modLines.getLast?
   match lastMod? with
   | none => "unknown"
   | some l =>
     -- "module foo (" → "foo"
-    let toks := l.trim.splitOn " "
+    let toks := l.trimAscii.toString.splitOn " "
     if toks.length < 2 then "unknown"
     else
       let raw := toks[1]!
       -- strip trailing "(" if module decl puts it on the same line
-      String.mk (raw.toList.reverse.dropWhile (fun c => c == '(' || c == ' ') |>.reverse)
+      String.ofList (raw.toList.reverse.dropWhile (fun c => c == '(' || c == ' ') |>.reverse)
 
 def fixtureVerilogs : List (FixtureCase × String) :=
   [ ({ declName := ``dff,            label := "dff",            stimulus := dffStimulus },            dffVerilog)

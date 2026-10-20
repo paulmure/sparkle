@@ -40,10 +40,12 @@
 /* Declare dlopen/dlsym/dlclose/dlerror manually to avoid dlfcn.h
    (Lean's bundled clang uses -nostdinc which excludes system headers) */
 #define RTLD_NOW 2
+#if defined(__GLIBC__)
 #define LM_ID_NEWLM (-1L)  /* glibc: request a fresh link-map namespace */
 typedef long Lmid_t;
-extern void* dlopen(const char* path, int mode);
 extern void* dlmopen(Lmid_t lmid, const char* path, int mode);
+#endif
+extern void* dlopen(const char* path, int mode);
 extern void* dlsym(void* handle, const char* symbol);
 extern int   dlclose(void* handle);
 extern char* dlerror(void);
@@ -111,18 +113,12 @@ static lean_obj_res mk_io_error(const char* msg) {
     lean_obj_res err_str = lean_mk_string(msg);
     lean_obj_res io_err = lean_alloc_ctor(7, 1, 0);  /* IO.Error.userError */
     lean_ctor_set(io_err, 0, err_str);
-    lean_obj_res result = lean_alloc_ctor(1, 2, 0);
-    lean_ctor_set(result, 0, io_err);
-    lean_ctor_set(result, 1, lean_io_mk_world());
-    return result;
+    return lean_io_result_mk_error(io_err);
 }
 
 /* Helper: make IO ok result */
 static lean_obj_res mk_io_ok(lean_obj_res val) {
-    lean_obj_res result = lean_alloc_ctor(0, 2, 0);
-    lean_ctor_set(result, 0, val);
-    lean_ctor_set(result, 1, lean_io_mk_world());
-    return result;
+    return lean_io_result_mk_ok(val);
 }
 
 extern int strcmp(const char* a, const char* b);
@@ -159,16 +155,20 @@ extern void* memcpy(void* dst, const void* src, unsigned long n);
  * longer emit a warning for the dlopen-collapse case — it is
  * not a correctness hazard under the vtable model.
  */
-LEAN_EXPORT lean_obj_res sparkle_jit_load(b_lean_obj_arg path, lean_obj_arg w) {
-    (void)w;
+LEAN_EXPORT lean_obj_res sparkle_jit_load(b_lean_obj_arg path) {
     const char* cpath = lean_string_cstr(path);
 
+    /* Fresh link-map namespaces are a glibc extension. */
+#if defined(__GLIBC__)
     void* lib = dlmopen(LM_ID_NEWLM, cpath, RTLD_NOW);
     if (!lib) {
         /* Clear stale dlerror from the failed dlmopen attempt. */
         (void)dlerror();
         lib = dlopen(cpath, RTLD_NOW);
     }
+#else
+    void* lib = dlopen(cpath, RTLD_NOW);
+#endif
     if (!lib) {
         char buf[1024];
         snprintf(buf, sizeof(buf), "JIT: dl(m)open failed: %s", dlerror());
@@ -208,40 +208,35 @@ LEAN_EXPORT lean_obj_res sparkle_jit_load(b_lean_obj_arg path, lean_obj_arg w) {
 }
 
 /* sparkle_jit_eval : @& JITHandle → IO Unit */
-LEAN_EXPORT lean_obj_res sparkle_jit_eval(b_lean_obj_arg handle, lean_obj_arg w) {
-    (void)w;
+LEAN_EXPORT lean_obj_res sparkle_jit_eval(b_lean_obj_arg handle) {
     JITHandle* h = get_handle(handle);
     if (h->vt && h->vt->eval) h->vt->eval(h->ctx);
     return mk_io_ok(lean_box(0));
 }
 
 /* sparkle_jit_tick : @& JITHandle → IO Unit */
-LEAN_EXPORT lean_obj_res sparkle_jit_tick(b_lean_obj_arg handle, lean_obj_arg w) {
-    (void)w;
+LEAN_EXPORT lean_obj_res sparkle_jit_tick(b_lean_obj_arg handle) {
     JITHandle* h = get_handle(handle);
     if (h->vt && h->vt->tick) h->vt->tick(h->ctx);
     return mk_io_ok(lean_box(0));
 }
 
 /* sparkle_jit_eval_tick : @& JITHandle → IO Unit */
-LEAN_EXPORT lean_obj_res sparkle_jit_eval_tick(b_lean_obj_arg handle, lean_obj_arg w) {
-    (void)w;
+LEAN_EXPORT lean_obj_res sparkle_jit_eval_tick(b_lean_obj_arg handle) {
     JITHandle* h = get_handle(handle);
     if (h->vt && h->vt->eval_tick) h->vt->eval_tick(h->ctx);
     return mk_io_ok(lean_box(0));
 }
 
 /* sparkle_jit_reset : @& JITHandle → IO Unit */
-LEAN_EXPORT lean_obj_res sparkle_jit_reset(b_lean_obj_arg handle, lean_obj_arg w) {
-    (void)w;
+LEAN_EXPORT lean_obj_res sparkle_jit_reset(b_lean_obj_arg handle) {
     JITHandle* h = get_handle(handle);
     if (h->vt && h->vt->reset) h->vt->reset(h->ctx);
     return mk_io_ok(lean_box(0));
 }
 
 /* sparkle_jit_destroy : @& JITHandle → IO Unit */
-LEAN_EXPORT lean_obj_res sparkle_jit_destroy(b_lean_obj_arg handle, lean_obj_arg w) {
-    (void)w;
+LEAN_EXPORT lean_obj_res sparkle_jit_destroy(b_lean_obj_arg handle) {
     JITHandle* h = get_handle(handle);
     if (h->ctx && h->vt && h->vt->destroy) {
         h->vt->destroy(h->ctx);
@@ -252,8 +247,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_destroy(b_lean_obj_arg handle, lean_obj_arg
 
 /* sparkle_jit_set_input : @& JITHandle → UInt32 → UInt64 → IO Unit */
 LEAN_EXPORT lean_obj_res sparkle_jit_set_input(
-    b_lean_obj_arg handle, uint32_t idx, uint64_t val, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint32_t idx, uint64_t val) {
     JITHandle* h = get_handle(handle);
     if (h->vt && h->vt->set_input) h->vt->set_input(h->ctx, idx, val);
     return mk_io_ok(lean_box(0));
@@ -261,8 +255,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_set_input(
 
 /* sparkle_jit_get_output : @& JITHandle → UInt32 → IO UInt64 */
 LEAN_EXPORT lean_obj_res sparkle_jit_get_output(
-    b_lean_obj_arg handle, uint32_t idx, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint32_t idx) {
     JITHandle* h = get_handle(handle);
     uint64_t val = (h->vt && h->vt->get_output) ? h->vt->get_output(h->ctx, idx) : 0;
     return mk_io_ok(lean_box_uint64(val));
@@ -270,8 +263,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_get_output(
 
 /* sparkle_jit_get_wire : @& JITHandle → UInt32 → IO UInt64 */
 LEAN_EXPORT lean_obj_res sparkle_jit_get_wire(
-    b_lean_obj_arg handle, uint32_t idx, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint32_t idx) {
     JITHandle* h = get_handle(handle);
     uint64_t val = (h->vt && h->vt->get_wire) ? h->vt->get_wire(h->ctx, idx) : 0;
     return mk_io_ok(lean_box_uint64(val));
@@ -279,9 +271,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_get_wire(
 
 /* sparkle_jit_set_mem : @& JITHandle → UInt32 → UInt32 → UInt32 → IO Unit */
 LEAN_EXPORT lean_obj_res sparkle_jit_set_mem(
-    b_lean_obj_arg handle, uint32_t mem_idx, uint32_t addr, uint32_t data,
-    lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint32_t mem_idx, uint32_t addr, uint32_t data) {
     JITHandle* h = get_handle(handle);
     if (h->vt && h->vt->set_mem) h->vt->set_mem(h->ctx, mem_idx, addr, data);
     return mk_io_ok(lean_box(0));
@@ -289,8 +279,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_set_mem(
 
 /* sparkle_jit_get_mem : @& JITHandle → UInt32 → UInt32 → IO UInt32 */
 LEAN_EXPORT lean_obj_res sparkle_jit_get_mem(
-    b_lean_obj_arg handle, uint32_t mem_idx, uint32_t addr, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint32_t mem_idx, uint32_t addr) {
     JITHandle* h = get_handle(handle);
     uint32_t val = (h->vt && h->vt->get_mem) ? h->vt->get_mem(h->ctx, mem_idx, addr) : 0;
     return mk_io_ok(lean_box_uint32(val));
@@ -299,8 +288,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_get_mem(
 /* sparkle_jit_memset_word : @& JITHandle → UInt32 → UInt32 → UInt32 → UInt32 → IO Unit */
 LEAN_EXPORT lean_obj_res sparkle_jit_memset_word(
     b_lean_obj_arg handle, uint32_t mem_idx, uint32_t addr, uint32_t val,
-    uint32_t count, lean_obj_arg w) {
-    (void)w;
+    uint32_t count) {
     JITHandle* h = get_handle(handle);
     if (h->vt && h->vt->memset_word) h->vt->memset_word(h->ctx, mem_idx, addr, val, count);
     return mk_io_ok(lean_box(0));
@@ -308,8 +296,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_memset_word(
 
 /* sparkle_jit_wire_name : @& JITHandle → UInt32 → IO String */
 LEAN_EXPORT lean_obj_res sparkle_jit_wire_name(
-    b_lean_obj_arg handle, uint32_t idx, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint32_t idx) {
     JITHandle* h = get_handle(handle);
     const char* name = (h->vt && h->vt->wire_name) ? h->vt->wire_name(idx) : "";
     return mk_io_ok(lean_mk_string(name));
@@ -317,8 +304,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_wire_name(
 
 /* sparkle_jit_num_wires : @& JITHandle → IO UInt32 */
 LEAN_EXPORT lean_obj_res sparkle_jit_num_wires(
-    b_lean_obj_arg handle, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle) {
     JITHandle* h = get_handle(handle);
     uint32_t n = (h->vt && h->vt->num_wires) ? h->vt->num_wires() : 0;
     return mk_io_ok(lean_box_uint32(n));
@@ -326,8 +312,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_num_wires(
 
 /* sparkle_jit_set_reg : @& JITHandle → UInt32 → UInt64 → IO Unit */
 LEAN_EXPORT lean_obj_res sparkle_jit_set_reg(
-    b_lean_obj_arg handle, uint32_t idx, uint64_t val, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint32_t idx, uint64_t val) {
     JITHandle* h = get_handle(handle);
     if (h->vt && h->vt->set_reg) h->vt->set_reg(h->ctx, idx, val);
     return mk_io_ok(lean_box(0));
@@ -335,8 +320,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_set_reg(
 
 /* sparkle_jit_get_reg : @& JITHandle → UInt32 → IO UInt64 */
 LEAN_EXPORT lean_obj_res sparkle_jit_get_reg(
-    b_lean_obj_arg handle, uint32_t idx, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint32_t idx) {
     JITHandle* h = get_handle(handle);
     uint64_t val = (h->vt && h->vt->get_reg) ? h->vt->get_reg(h->ctx, idx) : 0;
     return mk_io_ok(lean_box_uint64(val));
@@ -344,8 +328,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_get_reg(
 
 /* sparkle_jit_reg_name : @& JITHandle → UInt32 → IO String */
 LEAN_EXPORT lean_obj_res sparkle_jit_reg_name(
-    b_lean_obj_arg handle, uint32_t idx, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint32_t idx) {
     JITHandle* h = get_handle(handle);
     const char* name = (h->vt && h->vt->reg_name) ? h->vt->reg_name(idx) : "";
     return mk_io_ok(lean_mk_string(name));
@@ -353,8 +336,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_reg_name(
 
 /* sparkle_jit_num_regs : @& JITHandle → IO UInt32 */
 LEAN_EXPORT lean_obj_res sparkle_jit_num_regs(
-    b_lean_obj_arg handle, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle) {
     JITHandle* h = get_handle(handle);
     uint32_t n = (h->vt && h->vt->num_regs) ? h->vt->num_regs() : 0;
     return mk_io_ok(lean_box_uint32(n));
@@ -362,8 +344,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_num_regs(
 
 /* sparkle_jit_snapshot : @& JITHandle → IO UInt64 */
 LEAN_EXPORT lean_obj_res sparkle_jit_snapshot(
-    b_lean_obj_arg handle, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle) {
     JITHandle* h = get_handle(handle);
     void* snap = (h->vt && h->vt->snapshot) ? h->vt->snapshot(h->ctx) : NULL;
     return mk_io_ok(lean_box_uint64((uint64_t)snap));
@@ -371,8 +352,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_snapshot(
 
 /* sparkle_jit_restore : @& JITHandle → UInt64 → IO Unit */
 LEAN_EXPORT lean_obj_res sparkle_jit_restore(
-    b_lean_obj_arg handle, uint64_t snap, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint64_t snap) {
     JITHandle* h = get_handle(handle);
     if (h->vt && h->vt->restore && snap) h->vt->restore(h->ctx, (void*)snap);
     return mk_io_ok(lean_box(0));
@@ -380,8 +360,7 @@ LEAN_EXPORT lean_obj_res sparkle_jit_restore(
 
 /* sparkle_jit_free_snapshot : @& JITHandle → UInt64 → IO Unit */
 LEAN_EXPORT lean_obj_res sparkle_jit_free_snapshot(
-    b_lean_obj_arg handle, uint64_t snap, lean_obj_arg w) {
-    (void)w;
+    b_lean_obj_arg handle, uint64_t snap) {
     JITHandle* h = get_handle(handle);
     if (h->vt && h->vt->free_snapshot && snap) h->vt->free_snapshot((void*)snap);
     return mk_io_ok(lean_box(0));
@@ -464,10 +443,8 @@ static void fill_vtable(CDCJITVtable* vt, JITHandle* h) {
 LEAN_EXPORT lean_obj_res sparkle_jit_run_cdc(
     b_lean_obj_arg handle_a, b_lean_obj_arg handle_b,
     uint64_t cycles_a, uint64_t cycles_b,
-    uint32_t out_port_a, uint32_t in_port_b,
-    lean_obj_arg w)
+    uint32_t out_port_a, uint32_t in_port_b)
 {
-    (void)w;
 
     if (!ensure_cdc_runner()) {
         return mk_io_error("CDC: failed to load cdc_runner shared library. "

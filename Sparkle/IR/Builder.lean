@@ -91,7 +91,7 @@ private def stripHygiene (s : String) : String :=
     -- characters from the right; the bound is `h.length`.
     let chars := h.toList
     let trimmed := chars.reverse.dropWhile (· == '_') |>.reverse
-    String.mk trimmed
+    String.ofList trimmed
   | []     => s
 
 /-- Generate a fresh wire name.

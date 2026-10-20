@@ -141,7 +141,7 @@ def main (args : List String) : IO UInt32 := do
   IO.println s!"  lw events from BitNet output register: {lwEvents}"
   IO.println s!"  UART bytes emitted: {bytes.size}"
   if bytes.size > 0 then
-    let asStr := String.mk (bytes.toList.map fun b => Char.ofNat b.toNat)
+    let asStr := String.ofList (bytes.toList.map fun b => Char.ofNat b.toNat)
     IO.println "  UART output (first 500 chars):"
     IO.println (asStr.take 500)
   IO.println "══════════════════════════════════════════════"

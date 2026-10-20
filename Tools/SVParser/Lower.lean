@@ -2773,7 +2773,7 @@ def parseAndLowerHierarchical (input : String) : Except String Design := do
     |> fun s =>
       let lines := s.splitOn "\n"
       (lines.map fun l =>
-        let trimmed := String.trimLeft l
+        let trimmed := l.trimAsciiStart.toString
         if trimmed.startsWith "integer " then ""
         else
           let parts := l.splitOn "begin : "

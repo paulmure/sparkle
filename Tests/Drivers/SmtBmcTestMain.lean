@@ -68,7 +68,7 @@ def findExe (name : String) (envOverride : String) : IO (Option String) := do
   | some p => return some p
   | none =>
     let r ← IO.Process.output { cmd := "which", args := #[name] }
-    return if r.exitCode == 0 then some (r.stdout.trim) else none
+    return if r.exitCode == 0 then some (r.stdout.trimAscii.toString) else none
 
 inductive Expect where | unsat | sat
   deriving BEq
@@ -152,7 +152,7 @@ def main : IO Unit := do
           IO.Process.exit 1
         let rr ← IO.Process.output { cmd := bin, args := #[] }
         if rr.exitCode == 0 then
-          IO.println s!"[smt] {name}: sat + counterexample CONFIRMED by CSim replay ({rr.stdout.trim}) ✓"
+          IO.println s!"[smt] {name}: sat + counterexample CONFIRMED by CSim replay ({rr.stdout.trimAscii.toString}) ✓"
         else
           IO.eprintln s!"[smt] {name}: counterexample did NOT reproduce on CSim — solver or emitter bug!\n{rr.stdout}"
           IO.Process.exit 1

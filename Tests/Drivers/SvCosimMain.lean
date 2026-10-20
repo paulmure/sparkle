@@ -400,7 +400,7 @@ def runCosim (dir rtDir workDir name : String) (cycles : Nat)
   let cmain := emitCMain design m.name ports stim cycles hasClock
   let wd := System.FilePath.mk workDir
   IO.FS.createDirAll wd
-  let base := name.dropRight 3
+  let base := name.dropEnd 3
   IO.FS.writeFile (wd / s!"{base}_tb.v") tb
   IO.FS.writeFile (wd / s!"{base}_main.c") cmain
   let run (cmd : String) (args : Array String) : IO (Nat × String) := do

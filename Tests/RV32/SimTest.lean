@@ -42,21 +42,21 @@ def main (args : List String) : IO Unit := do
   IO.println s!"Running Lean4 simulation for {maxCycles} cycles..."
   let soc ← @rv32iSoCSimulateFull defaultDom initFn
 
-  -- Extract signals from the 115-element state tuple
-  let pcSig := projN! soc 115 0           -- PC
-  let storeAddrSig := projN! soc 115 41   -- Previous store address (ALU result)
-  let storeDataSig := projN! soc 115 42   -- Previous store data (ex_rs2)
-  let storeEnSig := projN! soc 115 43     -- Previous store enable (idex_memWrite)
+  -- Use named state projections so diagnostics track the SoC state layout.
+  let pcSig := SoCState.pcReg soc           -- PC
+  let storeAddrSig := SoCState.prevStoreAddr soc   -- Previous store address (ALU result)
+  let storeDataSig := SoCState.prevStoreData soc   -- Previous store data (ex_rs2)
+  let storeEnSig := SoCState.prevStoreEn soc     -- Previous store enable (idex_memWrite)
   -- Extra diagnostics
-  let exwbAluSig := projN! soc 115 30     -- exwb_alu (should match prevStoreAddr)
-  let idexMemWriteSig := projN! soc 115 9 -- idex_memWrite (EX stage store enable)
-  let idexPcSig := projN! soc 115 26      -- idex_pc (PC of EX stage instruction)
+  let exwbAluSig := SoCState.exwb_alu soc     -- exwb_alu (should match prevStoreAddr)
+  let idexMemWriteSig := SoCState.idex_memWrite soc -- idex_memWrite (EX stage store enable)
+  let idexPcSig := SoCState.idex_pc soc      -- idex_pc (PC of EX stage instruction)
   -- LR.W debug: pipeline memToReg signals
-  let idexMemToRegSig := projN! soc 115 10  -- idex_memToReg
-  let exwbM2rSig := projN! soc 115 33       -- exwb_m2r
-  let idexMemReadSig := projN! soc 115 8    -- idex_memRead
-  let exwbIsAMOSig := projN! soc 115 64    -- exwb_isAMO
-  let ifidInstSig := projN! soc 115 3       -- ifid_inst
+  let idexMemToRegSig := SoCState.idex_memToReg soc  -- idex_memToReg
+  let exwbM2rSig := SoCState.exwb_m2r soc       -- exwb_m2r
+  let idexMemReadSig := SoCState.idex_memRead soc    -- idex_memRead
+  let exwbIsAMOSig := SoCState.exwb_isAMO soc    -- exwb_isAMO
+  let ifidInstSig := SoCState.ifid_inst soc       -- ifid_inst
 
   let mut prevPC := 0#32
   let mut haltCount := 0
