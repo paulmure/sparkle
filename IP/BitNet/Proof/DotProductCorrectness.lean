@@ -67,24 +67,29 @@ theorem scaled_score_no_shift :
 
 theorem quantize_one :
     quantizeToInt8 (BitVec.ofNat 32 0x10000) 10 = BitVec.ofInt 8 64 := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 theorem quantize_zero :
     quantizeToInt8 (BitVec.ofNat 32 0) 10 = BitVec.ofInt 8 0 := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 theorem quantize_pos_sat :
     quantizeToInt8 (BitVec.ofNat 32 0x7FFFFFFF) 10 = BitVec.ofNat 8 127 := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 theorem quantize_neg_sat :
     quantizeToInt8 (BitVec.ofInt 32 (-0x7FFFFFFF)) 10
     = BitVec.ofInt 8 (-128) := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 theorem quantize_neg_one :
     quantizeToInt8 (BitVec.ofInt 32 (-0x10000)) 10
     = BitVec.ofInt 8 (-64) := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 end Sparkle.IP.BitNet.Proof

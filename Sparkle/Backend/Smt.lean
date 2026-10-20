@@ -327,7 +327,7 @@ inductive BmcOutcome where
 private def tokenize (s : String) : List String :=
   let s := s.replace "(" " ( " |>.replace ")" " ) "
   (s.splitOn " ").flatMap (fun t =>
-    let t := t.trim
+    let t := t.trimAscii.toString
     if t.isEmpty then [] else [t])
 
 private def parseBvToken (t : String) : Option Nat :=
@@ -347,7 +347,7 @@ private def parseBvToken (t : String) : Option Nat :=
 /-- Strip the `|...|` quoting and the `_c<frame>` suffix.
     Returns (baseName, frame). -/
 private def splitSym (t : String) : Option (String × Nat) :=
-  let t := if t.startsWith "|" && t.endsWith "|" then ((t.drop 1).dropRight 1).toString else t
+  let t := if t.startsWith "|" && t.endsWith "|" then ((t.drop 1).dropEnd 1).toString else t
   match t.splitOn "_c" with
   | [] | [_] => none
   | parts =>

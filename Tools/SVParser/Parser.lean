@@ -30,7 +30,7 @@ def preprocess (input : String) : String := Id.run do
   let mut ifdefDepth : Nat := 0
   let mut skipDepth : Nat := 0  -- depth at which we started skipping (0 = not skipping)
   for line in lines do
-    let trimmed := line.trimLeft
+    let trimmed := line.trimAsciiStart.toString
     if trimmed.startsWith "`ifdef" then
       ifdefDepth := ifdefDepth + 1
       if skipDepth == 0 then

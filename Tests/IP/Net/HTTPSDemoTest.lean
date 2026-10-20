@@ -171,7 +171,7 @@ def main : IO Unit := do
     if !(ct == Sparkle.IP.TLS.Record.ContentType.applicationData) then
       IO.println "  ✗ wrong record content type"
       IO.Process.exit 1
-    IO.println s!"  ✓ server decrypted to: {String.mk (plaintext.toList.map (Char.ofNat ·.toNat)) |>.trim}"
+    IO.println s!"  ✓ server decrypted to: {String.mk (plaintext.toList.map (Char.ofNat ·.toNat)) |>.trimAscii.toString}"
 
   -- Server → Client: HTTP/1.0 200 OK response.
   let respStr :=

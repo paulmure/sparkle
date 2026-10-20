@@ -85,7 +85,7 @@ def runFirmwareCheck : IO Bool := do
     return false
   let content ← IO.FS.readFile hexPath
   let wordLines := (content.splitOn "\n").filter fun line =>
-    let t := line.trimLeft
+    let t := line.trimAsciiStart.toString
     t.length >= 8 && !t.startsWith "@"
   if wordLines.length < 10 then
     IO.println s!"  ❌ {hexPath} has only {wordLines.length} words — likely truncated"

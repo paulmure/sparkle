@@ -40,10 +40,12 @@
 /* Declare dlopen/dlsym/dlclose/dlerror manually to avoid dlfcn.h
    (Lean's bundled clang uses -nostdinc which excludes system headers) */
 #define RTLD_NOW 2
+#if defined(__GLIBC__)
 #define LM_ID_NEWLM (-1L)  /* glibc: request a fresh link-map namespace */
 typedef long Lmid_t;
-extern void* dlopen(const char* path, int mode);
 extern void* dlmopen(Lmid_t lmid, const char* path, int mode);
+#endif
+extern void* dlopen(const char* path, int mode);
 extern void* dlsym(void* handle, const char* symbol);
 extern int   dlclose(void* handle);
 extern char* dlerror(void);
@@ -163,12 +165,17 @@ LEAN_EXPORT lean_obj_res sparkle_jit_load(b_lean_obj_arg path, lean_obj_arg w) {
     (void)w;
     const char* cpath = lean_string_cstr(path);
 
+    /* Fresh link-map namespaces are a glibc extension. */
+#if defined(__GLIBC__)
     void* lib = dlmopen(LM_ID_NEWLM, cpath, RTLD_NOW);
     if (!lib) {
         /* Clear stale dlerror from the failed dlmopen attempt. */
         (void)dlerror();
         lib = dlopen(cpath, RTLD_NOW);
     }
+#else
+    void* lib = dlopen(cpath, RTLD_NOW);
+#endif
     if (!lib) {
         char buf[1024];
         snprintf(buf, sizeof(buf), "JIT: dl(m)open failed: %s", dlerror());

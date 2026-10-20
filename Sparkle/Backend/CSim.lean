@@ -1829,9 +1829,9 @@ def emitModule (m : Module) (design : Option Design := none)
       s!"    {emitFieldDecl p.ty (sanitizeName p.name)};"
 
     let extractDeclName (line : String) : Option String := Id.run do
-      let trimmed := line.trimLeft
+      let trimmed := line.trimAsciiStart.toString
       if trimmed.isEmpty then return none
-      let withoutSemi := if trimmed.endsWith ";" then trimmed.dropRight 1 else trimmed
+      let withoutSemi := if trimmed.endsWith ";" then (trimmed.dropEnd 1).toString else trimmed
       -- Strip array dimensions after the identifier
       let beforeBracket := (withoutSemi.splitOn "[").head!
       let toks := (beforeBracket.splitOn " ").filter (· != "")

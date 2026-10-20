@@ -33,7 +33,7 @@ def main : IO Unit := do
 
   -- 1. Field smoke checks.
   let pV := Sparkle.IP.Crypto.Secp256k1Field.p
-  IO.println s!"  p (low 64 hex) = ...{Nat.toDigits 16 (pV % (2^256)) |> String.ofList |>.takeRight 64}"
+  IO.println s!"  p (low 64 hex) = ...{Nat.toDigits 16 (pV % (2^256)) |> String.ofList |>.takeEnd 64}"
   let r0 := Sparkle.IP.Crypto.Secp256k1Field.add (pV - 1) 1
   IO.println s!"  (p-1) + 1 mod p = {r0} (expected 0) {if r0 = 0 then "✓" else "✗"}"
   if r0 ≠ 0 then ok := false

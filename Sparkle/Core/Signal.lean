@@ -462,7 +462,8 @@ private unsafe def memoryImpl {addrWidth dataWidth : Nat}
       -- IMPORTANT: Never hold a `take`d array while evaluating signals (.val).
       -- Signal evaluation can re-enter this function at a different timestep,
       -- causing a double-take on arrRef → segfault (Lean's take leaves a dummy).
-      -- Fix: evaluate signals first, then briefly take/mutate/set.
+      -- Evaluate signals first, then take/mutate/put. Lean 4.36 requires
+      -- put after take; set performs a swap and reads the empty reference.
       let processAndRead (t : Nat) : IO (BitVec dataWidth) := do
         if t == 0 then return 0#dataWidth
         let mut step ← stepRef.get
@@ -472,9 +473,9 @@ private unsafe def memoryImpl {addrWidth dataWidth : Nat}
           let waddr := (writeAddr.val step).toNat
           let wdata := writeData.val step
           if we && waddr < size then
-            -- Briefly take, mutate in-place (rc=1), set back
+            -- Briefly take, mutate in-place (rc=1), put back
             let arr ← arrRef.take
-            arrRef.set (arr.set! waddr wdata)
+            arrRef.put (arr.set! waddr wdata)
           step := step + 1
         stepRef.set step
         -- Evaluate read address first
@@ -482,7 +483,7 @@ private unsafe def memoryImpl {addrWidth dataWidth : Nat}
         -- Briefly take to read
         let arr ← arrRef.take
         let result := if raddr < arr.size then arr[raddr]! else 0#dataWidth
-        arrRef.set arr
+        arrRef.put arr
         return result
       return (⟨fun t =>
         match unsafeIO (processAndRead t) with
@@ -562,7 +563,8 @@ private unsafe def memoryComboReadImpl {addrWidth dataWidth : Nat}
       -- IMPORTANT: Never hold a `take`d array while evaluating signals (.val).
       -- Signal evaluation can re-enter this function at a different timestep,
       -- causing a double-take on arrRef → segfault (Lean's take leaves a dummy).
-      -- Fix: evaluate signals first, then briefly take/mutate/set.
+      -- Evaluate signals first, then take/mutate/put. Lean 4.36 requires
+      -- put after take; set performs a swap and reads the empty reference.
       let processAndRead (t : Nat) : IO (BitVec dataWidth) := do
         let mut step ← stepRef.get
         -- Process writes from step 0..t-1
@@ -572,9 +574,9 @@ private unsafe def memoryComboReadImpl {addrWidth dataWidth : Nat}
           let waddr := (writeAddr.val step).toNat
           let wdata := writeData.val step
           if we && waddr < size then
-            -- Briefly take, mutate in-place (rc=1), set back
+            -- Briefly take, mutate in-place (rc=1), put back
             let arr ← arrRef.take
-            arrRef.set (arr.set! waddr wdata)
+            arrRef.put (arr.set! waddr wdata)
           step := step + 1
         stepRef.set step
         -- Evaluate read address BEFORE taking array
@@ -582,7 +584,7 @@ private unsafe def memoryComboReadImpl {addrWidth dataWidth : Nat}
         -- Briefly take to read
         let arr ← arrRef.take
         let result := if raddr < arr.size then arr[raddr]! else 0#dataWidth
-        arrRef.set arr
+        arrRef.put arr
         return result
       return (⟨fun t =>
         match unsafeIO (processAndRead t) with
@@ -651,7 +653,8 @@ private unsafe def memoryWithInitImpl {addrWidth dataWidth : Nat}
       -- IMPORTANT: Never hold a `take`d array while evaluating signals (.val).
       -- Signal evaluation can re-enter this function at a different timestep,
       -- causing a double-take on arrRef → segfault (Lean's take leaves a dummy).
-      -- Fix: evaluate signals first, then briefly take/mutate/set.
+      -- Evaluate signals first, then take/mutate/put. Lean 4.36 requires
+      -- put after take; set performs a swap and reads the empty reference.
       let processAndRead (t : Nat) : IO (BitVec dataWidth) := do
         if t == 0 then return initData (readAddr.val 0)
         let mut step ← stepRef.get
@@ -661,9 +664,9 @@ private unsafe def memoryWithInitImpl {addrWidth dataWidth : Nat}
           let waddr := (writeAddr.val step).toNat
           let wdata := writeData.val step
           if we && waddr < size then
-            -- Briefly take, mutate in-place (rc=1), set back
+            -- Briefly take, mutate in-place (rc=1), put back
             let arr ← arrRef.take
-            arrRef.set (arr.set! waddr wdata)
+            arrRef.put (arr.set! waddr wdata)
           step := step + 1
         stepRef.set step
         -- Evaluate read address first
@@ -671,7 +674,7 @@ private unsafe def memoryWithInitImpl {addrWidth dataWidth : Nat}
         -- Briefly take to read
         let arr ← arrRef.take
         let result := if raddr < arr.size then arr[raddr]! else initData (readAddr.val (t - 1))
-        arrRef.set arr
+        arrRef.put arr
         return result
       return (⟨fun t =>
         match unsafeIO (processAndRead t) with

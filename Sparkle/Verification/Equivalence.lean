@@ -473,7 +473,7 @@ private def gitRefToIdentTag (ref : String) : String :=
 private def stripImports (src : String) : String :=
   let lines := src.splitOn "\n"
   let kept := lines.filter fun line =>
-    let t := line.trimLeft
+    let t := line.trimAsciiStart.toString
     !t.startsWith "import "
   String.intercalate "\n" kept
 

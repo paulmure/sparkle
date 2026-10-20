@@ -92,7 +92,7 @@ def splitModules (verilog : String) : List (String × String) :=
         let acc' := match cur with
           | some (n, body) => acc ++ [(n, String.intercalate "\n" body.reverse)]
           | none => acc
-        go rest (some (name.trim, [l])) acc'
+        go rest (some (name.trimAscii.toString, [l])) acc'
       else
         match cur with
         | some (n, body) =>
@@ -124,7 +124,7 @@ def identsIn (body : String) : List String :=
 def boundNames (body : String) : List String := Id.run do
   let mut out : List String := []
   for line in body.splitOn "\n" do
-    let t := line.trim
+    let t := line.trimAscii.toString
     -- `logic [7:0] name;`  /  `logic name;`  /  `logic [7:0] name = 8'h0;`
     -- (register declarations now carry the IR initial value)
     if t.startsWith "logic " then
@@ -132,15 +132,15 @@ def boundNames (body : String) : List String := Id.run do
         if containsSubstr t "]" then (t.splitOn "]").getLast!
         else String.mk (t.toList.drop 6)
       let beforeSemi := (afterBracket.splitOn ";").head!
-      let nm := ((beforeSemi.splitOn "=").head!).trim
+      let nm := ((beforeSemi.splitOn "=").head!).trimAscii.toString
       if nm != "" then out := nm :: out
     -- ports: `input logic [..] name,` / `output logic name`
     if t.startsWith "input " || t.startsWith "output " then
       let afterBracket :=
         if containsSubstr t "]" then (t.splitOn "]").getLast!
         else t
-      let cleaned := ((afterBracket.replace "," "").replace ")" "").trim
-      let nm := ((cleaned.splitOn " ").getLast!).trim
+      let cleaned := ((afterBracket.replace "," "").replace ")" "").trimAscii.toString
+      let nm := ((cleaned.splitOn " ").getLast!).trimAscii.toString
       if nm != "" then out := nm :: out
     -- instance line: `Child _tmp_inst_x (.a(b), .c(d));`
     -- bind the instance name AND every `.label(` (child-side port names).
@@ -149,7 +149,7 @@ def boundNames (body : String) : List String := Id.run do
         if tok.startsWith "_tmp_inst_" then out := tok :: out
     for seg in t.splitOn "." do
       if containsSubstr seg "(" then
-        let lbl := (seg.splitOn "(").head!.trim
+        let lbl := (seg.splitOn "(").head!.trimAscii.toString
         if lbl != "" then out := lbl :: out
   return out.eraseDups
 
@@ -162,11 +162,11 @@ def undeclaredWires (body : String) : List String :=
 def outputPorts (body : String) : List String := Id.run do
   let mut out : List String := []
   for line in body.splitOn "\n" do
-    let t := line.trim
+    let t := line.trimAscii.toString
     if t.startsWith "output " then
       let afterBracket := if containsSubstr t "]" then (t.splitOn "]").getLast! else t
-      let cleaned := ((afterBracket.replace "," "").replace ")" "").trim
-      let nm := ((cleaned.splitOn " ").getLast!).trim
+      let cleaned := ((afterBracket.replace "," "").replace ")" "").trimAscii.toString
+      let nm := ((cleaned.splitOn " ").getLast!).trimAscii.toString
       if nm != "" then out := nm :: out
   return out.eraseDups
 
@@ -751,12 +751,12 @@ def unreachableRegisters (body : String) : List String := Id.run do
   let mut defOf : List (String × String) := []
   let mut regs : List String := []
   for l in lines do
-    let t := l.trim
+    let t := l.trimAscii.toString
     if containsSubstr t "<=" then
       -- first `<=` only, same reason as the `assign` case below
-      let lhs := ((t.splitOn "<=").head!).trim
+      let lhs := ((t.splitOn "<=").head!).trimAscii.toString
       let rhs := match t.splitOn "<=" with
-        | _ :: rest@(_ :: _) => (String.intercalate "<=" rest).trim
+        | _ :: rest@(_ :: _) => (String.intercalate "<=" rest).trimAscii.toString
         | _ => ""
       -- the reset arm (`x <= 8'd0;`) carries no dependency, so it simply
       -- contributes no idents
@@ -770,13 +770,13 @@ def unreachableRegisters (body : String) : List String := Id.run do
       -- the real dependencies and makes everything look reachable.
       match body'.splitOn "=" with
       | lhs :: rest@(_ :: _) =>
-        defOf := (lhs.trim, (String.intercalate "=" rest).trim) :: defOf
+        defOf := (lhs.trimAscii.toString, (String.intercalate "=" rest).trimAscii.toString) :: defOf
       | _ => pure ()
   -- seeds: output ports, plus everything feeding an instance port (an
   -- instance connection is an observable side effect from this module's view)
   let mut work : List String := outputPorts body
   for l in lines do
-    let t := l.trim
+    let t := l.trimAscii.toString
     if containsSubstr t "_tmp_inst_" then
       work := work ++ identsIn t
   -- fixed point

@@ -11,26 +11,32 @@ open Sparkle.IP.BitNet
 
 theorem relu_sq_negative :
     reluSquared (BitVec.ofInt 32 (-0x10000)) = BitVec.ofNat 32 0 := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 theorem relu_sq_zero :
     reluSquared (BitVec.ofNat 32 0) = BitVec.ofNat 32 0 := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 theorem relu_sq_one :
     reluSquared (BitVec.ofNat 32 0x10000) = BitVec.ofNat 32 0x10000 := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 theorem relu_sq_two :
     reluSquared (BitVec.ofNat 32 0x20000) = BitVec.ofNat 32 0x40000 := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 theorem relu_sq_half :
     reluSquared (BitVec.ofNat 32 0x8000) = BitVec.ofNat 32 0x4000 := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 theorem relu_sq_nonneg_minus2 :
     reluSquared (BitVec.ofInt 32 (-0x20000)) = BitVec.ofNat 32 0 := by
+  apply BitVec.eq_of_toNat_eq
   native_decide
 
 end Sparkle.IP.BitNet.Proof
