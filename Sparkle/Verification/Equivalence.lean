@@ -462,9 +462,9 @@ where
     is legal as a Lean identifier component. -/
 private def gitRefToIdentTag (ref : String) : String :=
   let cleaned := ref.toList.map (fun c =>
-    if c.isAlphanum || c == '_' then c else '_') |> String.mk
+    if c.isAlphanum || c == '_' then c else '_') |> String.ofList
   if cleaned.isEmpty then "unknown"
-  else if (cleaned.get 0).isDigit then "g" ++ cleaned
+  else if cleaned.front.isDigit then "g" ++ cleaned
   else cleaned
 
 /-- Drop `import …` lines from a Lean source string. `elabCommand` cannot

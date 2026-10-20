@@ -171,7 +171,7 @@ def main : IO Unit := do
     if !(ct == Sparkle.IP.TLS.Record.ContentType.applicationData) then
       IO.println "  ✗ wrong record content type"
       IO.Process.exit 1
-    IO.println s!"  ✓ server decrypted to: {String.mk (plaintext.toList.map (Char.ofNat ·.toNat)) |>.trimAscii.toString}"
+    IO.println s!"  ✓ server decrypted to: {String.ofList (plaintext.toList.map (Char.ofNat ·.toNat)) |>.trimAscii.toString}"
 
   -- Server → Client: HTTP/1.0 200 OK response.
   let respStr :=
@@ -192,7 +192,7 @@ def main : IO Unit := do
     if plaintext ≠ httpResp then
       IO.println "  ✗ client got different bytes"
       IO.Process.exit 1
-    let respStr := String.mk (plaintext.toList.map (Char.ofNat ·.toNat))
+    let respStr := String.ofList (plaintext.toList.map (Char.ofNat ·.toNat))
     IO.println "  ✓ client decrypted response:"
     -- Indent each line.
     for line in respStr.splitOn "\r\n" do

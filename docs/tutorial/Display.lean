@@ -36,8 +36,8 @@ the markers, and emits a Jupyter `display_data` payload.
 
 namespace Display
 
-private def esc : String := String.mk [Char.ofNat 0x1B]
-private def rs  : String := String.mk [Char.ofNat 0x1E]
+private def esc : String := String.ofList [Char.ofNat 0x1B]
+private def rs  : String := String.ofList [Char.ofNat 0x1E]
 
 /-- Emit a `text/html` payload. -/
 def html (content : String) : IO Unit :=

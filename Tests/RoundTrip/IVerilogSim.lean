@@ -858,7 +858,7 @@ def parseModuleName (verilog : String) : String :=
     else
       let raw := toks[1]!
       -- strip trailing "(" if module decl puts it on the same line
-      String.mk (raw.toList.reverse.dropWhile (fun c => c == '(' || c == ' ') |>.reverse)
+      String.ofList (raw.toList.reverse.dropWhile (fun c => c == '(' || c == ' ') |>.reverse)
 
 def fixtureVerilogs : List (FixtureCase × String) :=
   [ ({ declName := ``dff,            label := "dff",            stimulus := dffStimulus },            dffVerilog)

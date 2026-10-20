@@ -556,7 +556,7 @@ def main (args : List String) : IO UInt32 := do
   IO.println s!"  Total skipped:     {oracleState.totalSkipped}"
   IO.println s!"  UART bytes:        {uartBytes.size}"
   -- Dump full UART byte stream as a single string for non-newline traces.
-  let raw := String.mk (uartBytes.toList.map fun b => Char.ofNat b.toNat)
+  let raw := String.ofList (uartBytes.toList.map fun b => Char.ofNat b.toNat)
   IO.println s!"  UART raw stream: ===8<==="
   IO.println raw
   IO.println "  ===8<==="
@@ -661,7 +661,7 @@ def main (args : List String) : IO UInt32 := do
       let b2 ← JIT.getMem handle 3 waddr
       let b3 ← JIT.getMem handle 4 waddr
       let word := (b3.toNat <<< 24) ||| (b2.toNat <<< 16) ||| (b1.toNat <<< 8) ||| b0.toNat
-      let asAscii := String.mk [Char.ofNat (b0.toNat % 256), Char.ofNat (b1.toNat % 256), Char.ofNat (b2.toNat % 256), Char.ofNat (b3.toNat % 256)]
+      let asAscii := String.ofList [Char.ofNat (b0.toNat % 256), Char.ofNat (b1.toNat % 256), Char.ofNat (b2.toNat % 256), Char.ofNat (b3.toNat % 256)]
       IO.println s!"  +0x{toHex32 (i*4)}: 0x{toHex32 word} '{asAscii}'"
 
     -- Dump __timer_of_table entry 4 compatible field at PA 0x808f77d8 (16 words)
@@ -673,7 +673,7 @@ def main (args : List String) : IO UInt32 := do
       let b2 ← JIT.getMem handle 3 waddr
       let b3 ← JIT.getMem handle 4 waddr
       let word := (b3.toNat <<< 24) ||| (b2.toNat <<< 16) ||| (b1.toNat <<< 8) ||| b0.toNat
-      let asAscii := String.mk [Char.ofNat (b0.toNat % 256), Char.ofNat (b1.toNat % 256), Char.ofNat (b2.toNat % 256), Char.ofNat (b3.toNat % 256)]
+      let asAscii := String.ofList [Char.ofNat (b0.toNat % 256), Char.ofNat (b1.toNat % 256), Char.ofNat (b2.toNat % 256), Char.ofNat (b3.toNat % 256)]
       IO.println s!"  +0x{toHex32 (i*4)}: 0x{toHex32 word} '{asAscii}'"
 
     -- Dump __timer_of_table sentinel at VA 0xc04f785c → PA 0x808f785c

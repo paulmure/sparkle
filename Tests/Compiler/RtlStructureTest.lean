@@ -88,7 +88,7 @@ def splitModules (verilog : String) : List (String × String) :=
         -- NB: shadowing `rest` here would break the recursion (it is the
         -- remaining LINES).  Name the char list separately.
         let nameChars := l.toList.drop 7
-        let name := String.mk (nameChars.takeWhile isIdentChar)
+        let name := String.ofList (nameChars.takeWhile isIdentChar)
         let acc' := match cur with
           | some (n, body) => acc ++ [(n, String.intercalate "\n" body.reverse)]
           | none => acc
@@ -108,12 +108,12 @@ def identsIn (body : String) : List String :=
   let rec go (cs : List Char) (cur : List Char) (acc : List String) : List String :=
     match cs with
     | [] =>
-      let w := String.mk cur.reverse
+      let w := String.ofList cur.reverse
       if w.startsWith "_tmp_" || w.startsWith "_gen_" then w :: acc else acc
     | c :: rest =>
       if isIdentChar c then go rest (c :: cur) acc
       else
-        let w := String.mk cur.reverse
+        let w := String.ofList cur.reverse
         let acc' := if w.startsWith "_tmp_" || w.startsWith "_gen_" then w :: acc else acc
         go rest [] acc'
   (go cs [] []).eraseDups
@@ -130,7 +130,7 @@ def boundNames (body : String) : List String := Id.run do
     if t.startsWith "logic " then
       let afterBracket : String :=
         if containsSubstr t "]" then (t.splitOn "]").getLast!
-        else String.mk (t.toList.drop 6)
+        else String.ofList (t.toList.drop 6)
       let beforeSemi := (afterBracket.splitOn ";").head!
       let nm := ((beforeSemi.splitOn "=").head!).trimAscii.toString
       if nm != "" then out := nm :: out
@@ -764,7 +764,7 @@ def unreachableRegisters (body : String) : List String := Id.run do
         unless regs.contains lhs do regs := lhs :: regs
         unless (identsIn rhs).isEmpty do defOf := (lhs, rhs) :: defOf
     else if t.startsWith "assign " then
-      let body' := String.mk (t.toList.drop 7)
+      let body' := String.ofList (t.toList.drop 7)
       -- Split on the FIRST `=` only.  `getLast!` on `splitOn "="` breaks on
       -- any RHS containing `==`, `<=` or a second `=`, which silently drops
       -- the real dependencies and makes everything look reachable.

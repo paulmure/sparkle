@@ -106,8 +106,8 @@ def main : IO UInt32 := do
   IO.println "  Expected: full FFN pipeline (BitLinear→Scale→ReLU²→ElemMul→BitLinear→Scale→Residual)"
   let (unitOk, unitResults) ← runBitNetUnit
   for (inp, out) in unitResults do
-    let inHex := String.mk (Nat.toDigits 16 inp)
-    let outHex := String.mk (Nat.toDigits 16 out)
+    let inHex := String.ofList (Nat.toDigits 16 inp)
+    let outHex := String.ofList (Nat.toDigits 16 out)
     IO.println s!"    in=0x{inHex}  out=0x{outHex}"
   if unitOk then
     IO.println "  ✅ functional"

@@ -1979,7 +1979,7 @@ def emitModule (m : Module) (design : Option Design := none)
         if !skipNext && memberSet.contains buf then
           out := pushStr out "self->"
         out := pushStr out buf
-      return String.mk out.toList
+      return String.ofList out.toList
 
     let qualify := qualifyWith memberSet
     let evalBodyQ := evalBody.map qualify
